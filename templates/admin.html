@@ -109,6 +109,26 @@
             <p>準備上陣！您可以隨時在此重置所有人的報到狀態。</p>
             <button onclick="resetSystem()" class="btn btn-danger">清除所有報到紀錄</button>
         </div>
+
+        <div class="card">
+            <h2>3. 報到名單狀態 <button onclick="fetchAttendees()" class="btn" style="padding: 0.25rem 0.75rem; font-size: 0.9rem; margin-left: 1rem;">重新整理</button></h2>
+            <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 250px;">
+                    <h3 style="color: #27ae60; border-bottom: 2px solid #27ae60; padding-bottom: 0.5rem;">✅ 已報到 (<span id="count_checked">0</span>)</h3>
+                    <table id="table_checked">
+                        <thead><tr><th>姓名</th><th>時間</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div style="flex: 1; min-width: 250px;">
+                    <h3 style="color: #e74c3c; border-bottom: 2px solid #e74c3c; padding-bottom: 0.5rem;">❌ 未報到 (<span id="count_not">0</span>)</h3>
+                    <table id="table_not">
+                        <thead><tr><th>姓名</th><th>代碼</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -120,6 +140,29 @@
                     document.getElementById('downloadBtn').style.display = 'inline-block';
                 }
             });
+
+        fetchAttendees();
+
+        function fetchAttendees() {
+            fetch('/admin/attendees')
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('count_checked').textContent = data.checked_in.length;
+                    document.getElementById('count_not').textContent = data.not_checked_in.length;
+                    
+                    const tbodyChecked = document.querySelector('#table_checked tbody');
+                    tbodyChecked.innerHTML = '';
+                    data.checked_in.forEach(a => {
+                        tbodyChecked.innerHTML += `<tr><td>${a.name}</td><td>${a.time}</td></tr>`;
+                    });
+
+                    const tbodyNot = document.querySelector('#table_not tbody');
+                    tbodyNot.innerHTML = '';
+                    data.not_checked_in.forEach(a => {
+                        tbodyNot.innerHTML += `<tr><td style="color:#7f8c8d">${a.name}</td><td style="color:#7f8c8d; font-size:0.85em;">${a.id}</td></tr>`;
+                    });
+                });
+        }
 
         document.getElementById('uploadForm').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -138,6 +181,7 @@
                 showAlert(res.message);
                 if(res.status === 'success') {
                     document.getElementById('downloadBtn').style.display = 'inline-block';
+                    fetchAttendees();
                 }
                 btn.textContent = '更新名單';
                 btn.disabled = false;
@@ -148,7 +192,10 @@
             if(!confirm('確定要清除所有人的報到紀錄嗎？此動作無法復原！')) return;
             fetch('/reset', { method: 'POST' })
                 .then(res => res.json())
-                .then(res => showAlert(res.message));
+                .then(res => {
+                    showAlert(res.message);
+                    fetchAttendees();
+                });
         }
 
         function showAlert(msg) {
