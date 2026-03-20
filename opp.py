@@ -95,6 +95,25 @@ def system_status():
 def admin_status():
     return system_status()
 
+@app.route('/admin/attendees')
+def admin_attendees():
+    conn = sqlite3.connect('yiyu_event.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT id, name, is_checked_in, check_in_time FROM attendees ORDER BY check_in_time DESC, id ASC')
+    rows = cursor.fetchall()
+    conn.close()
+    
+    checked_in = []
+    not_checked_in = []
+    for r in rows:
+        attendee = {"id": r[0], "name": r[1], "time": r[3] or ""}
+        if r[2] == 1:
+            checked_in.append(attendee)
+        else:
+            not_checked_in.append(attendee)
+            
+    return jsonify({"checked_in": checked_in, "not_checked_in": not_checked_in})
+
 @app.route('/admin/upload', methods=['POST'])
 def admin_upload():
     content = request.json.get('data', '')
