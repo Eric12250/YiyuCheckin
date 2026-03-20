@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>翼雨娛樂專場報到系統</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            text-align: center;
+            background: #121212;
+            color: white;
+        }
+
+        #reader {
+            width: 300px;
+            margin: 20px auto;
+            border: 2px solid #00f2fe;
+        }
+
+        .stats {
+            font-size: 1.5rem;
+            margin: 20px;
+            color: #00f2fe;
+        }
+
+        #result {
+            padding: 15px;
+            margin: 20px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .success {
+            background: #2ecc71;
+        }
+
+        .error {
+            background: #e74c3c;
+        }
+
+        .btn-reset {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 1rem;
+            color: white;
+            background-color: #e74c3c;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .btn-reset:hover {
+            background-color: #c0392b;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>翼雨娛樂：專場點名</h1>
+    <div class="stats">
+        已報到：<span id="arrived">0</span> / 總人數：<span id="total">0</span>
+    </div>
+
+    <div id="reader"></div>
+    <div id="result"></div>
+
+
+    <script>
+        // 頁面載入時先抓取目前的報到狀態
+        window.onload = function() {
+            fetch('/status')
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('total').innerText = data.total;
+                    document.getElementById('arrived').innerText = data.arrived;
+                })
+                .catch(err => console.error("無法取得狀態:", err));
+        };
+
+        function onScanSuccess(decodedText) {
+            fetch('/checkin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ticket_id: decodedText })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    const resDiv = document.getElementById('result');
+                    resDiv.style.display = 'block';
+                    resDiv.innerText = data.status === 'success' ? `✅ ${data.name} 報到成功` : `❌ ${data.message}`;
+                    resDiv.className = data.status === 'success' ? 'success' : 'error';
+
+                    if (data.status === 'success') {
+                        document.getElementById('arrived').innerText = data.arrived;
+                        document.getElementById('total').innerText = data.total;
+                    }
+                });
+        }
+
+        function resetCheckins() {
+            if (confirm("確定要清除所有報到紀錄嗎？這會將所有人的報到狀態重設為『未報到』。")) {
+                fetch('/reset', {
+                    method: 'POST'
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            alert(data.message);
+                            document.getElementById('arrived').innerText = "0";
+                            document.getElementById('total').innerText = data.total;
+
+                            const resDiv = document.getElementById('result');
+                            resDiv.style.display = 'none';
+                        }
+                    });
+            }
+        }
+
+        let html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+        html5QrcodeScanner.render(onScanSuccess);
+    </script>
+</body>
+
+</html>
