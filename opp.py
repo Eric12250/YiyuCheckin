@@ -195,8 +195,10 @@ def reset_checkins():
     
     return jsonify({"status": "success", "message": "所有報到紀錄已清除！", "total": total})
 
+# 在應用啟動時初始化資料庫 (確保 Render/Gunicorn 也能觸發)
+init_db()
+
 if __name__ == '__main__':
-    init_db()
     # 既然轉為雲端部署，這裡移除 Serveo 的本地執行，由服務商負責網路曝光
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=True, use_reloader=False, host='0.0.0.0', port=port)
